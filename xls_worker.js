@@ -59,8 +59,34 @@ var config = {
                 }
             });
         };
+        this.transportHandler = function(id, writable) {
+            if (id && writable) {
+                config.transport.getIssue(id).done(function(data) {
+                    console.log(data)
+                }).done(function() {
+                    config.transport.execCommand(id, {
+                        'Campaign ID': writable
+                    });
+                }).done(function() {
+                    config.EventsBus.eventBusDo();
+                }).fail(function() {
+                    console.log('Ajax Request is Failed!')
+                });
+            }
+        };
     })(),
-
+    EventsBus: new(function() {
+        var eventBus = [];
+        this.eventBusPut = function(obj) {
+            eventBus.push(obj);
+        };
+        this.eventBusDo = function() {
+            if (eventBus.length) {
+                config.transport.transportHandler.apply(this, [eventBus[0]['id'], eventBus[0]['writable']]);
+                eventBus.splice(0, 1);
+            }
+        };
+    })(),
     eventManager: new(function() {
         var pool = {};
         this.on = function(event, handler) {
@@ -72,7 +98,6 @@ var config = {
             if (pool[event]) {
                 delete pool[event];
             }
-
         };
         this.trigger = function(event, args) {
             if (pool[event] && typeof pool[event] === 'function') {
@@ -105,40 +130,38 @@ var config = {
             }
         });
     },
-	
-	rangeSeeker : function(workSheet /*Final List*/ , columnName /*Oracle Project Name*/ ) {
-                    var workbook = config.wb['Workbook']['Sheets'];
-                    var range;
-                    var letterRanges = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-                    var ref;
-                    var splitRefArrOf2;
-                    var upperBoundNum;
-                    var higherBoundNum;
-                    var upperBoundLetter;
-                    var lowerBoundLetter;
-                    var columnNameLetter;
-                    workbook.forEach(function(sheet) {
-                        if (sheet['name'] == workSheet) {
-                            ref = config.wb.Sheets[sheet['name']]['!ref'];
-                            splitRefArrOf2 = ref.split(':');
-                            upperBoundNum = parseInt(config.wb.Sheets[sheet['name']]['!ref'].split(':')[0].match(/\d+/));
-                            lowerBoundNum = parseInt(config.wb.Sheets[sheet['name']]['!ref'].split(':')[1].match(/\d+/));
-                            upperBoundLetter = ref.split(':')[0].match(/\D/)[0];
-                            lowerBoundLetter = ref.split(':')[1].match(/\D/)[0];
-                            for (var i = letterRanges.length; i--;) {
-                                if (config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum] &&
-                                    config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v']) {
-                                    if (config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v'] == columnName ||
-                                        config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v'].includes(columnName)) {
-                                        range = letterRanges[i] + (upperBoundNum + 1) + ":" + letterRanges[i] + (upperBoundNum + 1);
-                                    }
-                                }
-                            }
+    rangeSeeker: function(workSheet /*Final List*/ , columnName /*Oracle Project Name*/ ) {
+        var workbook = config.wb['Workbook']['Sheets'];
+        var range;
+        var letterRanges = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+        var ref;
+        var splitRefArrOf2;
+        var upperBoundNum;
+        var higherBoundNum;
+        var upperBoundLetter;
+        var lowerBoundLetter;
+        var columnNameLetter;
+        workbook.forEach(function(sheet) {
+            if (sheet['name'] == workSheet) {
+                ref = config.wb.Sheets[sheet['name']]['!ref'];
+                splitRefArrOf2 = ref.split(':');
+                upperBoundNum = parseInt(config.wb.Sheets[sheet['name']]['!ref'].split(':')[0].match(/\d+/));
+                lowerBoundNum = parseInt(config.wb.Sheets[sheet['name']]['!ref'].split(':')[1].match(/\d+/));
+                upperBoundLetter = ref.split(':')[0].match(/\D/)[0];
+                lowerBoundLetter = ref.split(':')[1].match(/\D/)[0];
+                for (var i = letterRanges.length; i--;) {
+                    if (config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum] &&
+                        config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v']) {
+                        if (config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v'] == columnName ||
+                            config.wb.Sheets[sheet['name']][letterRanges[i] + upperBoundNum]['v'].includes(columnName)) {
+                            range = letterRanges[i] + (upperBoundNum + 1) + ":" + letterRanges[i] + (upperBoundNum + 1);
                         }
-                    });
-                    return range;
-        },
-	
+                    }
+                }
+            }
+        });
+        return range;
+    },
     getItemNamesByColumn: function(workSheet, columnName) {
         var workbook = config.wb.Workbook.Sheets;
         if (config.wb.Sheets[workSheet]) {
@@ -146,26 +169,26 @@ var config = {
             var upperBound = parseInt(config.wb.Sheets[workSheet]['!ref'].split(':')[1].match(/\d+/));
             var returnable = [];
             var theKey = '';
-			for (var i = 0; i < keys.length; i++) {
-                        if (keys[i].match(/^[A-Z]+(\d+)/) && keys[i].match(/^[A-Z]+(\d+)/)[1] === '1') {
-                            var _columnName =
-                                config.wb.Sheets[workSheet][keys[i]] ?
-                                config.wb.Sheets[workSheet][keys[i]]['v'] : '';
-                            if (_columnName == columnName) {
-                                theKey = keys[i];
-                                break;
-                            }
-                        }
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i].match(/^[A-Z]+(\d+)/) && keys[i].match(/^[A-Z]+(\d+)/)[1] === '1') {
+                    var _columnName =
+                        config.wb.Sheets[workSheet][keys[i]] ?
+                        config.wb.Sheets[workSheet][keys[i]]['v'] : '';
+                    if (_columnName == columnName) {
+                        theKey = keys[i];
+                        break;
                     }
-                    if (theKey) {
-                        theKey = theKey.replace(/[0-9]+/, '');
-                        while (upperBound > 1) {
-                            config.wb.Sheets[workSheet][theKey + upperBound] &&
-                                config.wb.Sheets[workSheet][theKey + upperBound]['v'] ?
-                                returnable.push(config.wb.Sheets[workSheet][theKey + upperBound]['v']) : returnable;
-                            upperBound--;
-                        }
-                   }
+                }
+            }
+            if (theKey) {
+                theKey = theKey.replace(/[0-9]+/, '');
+                while (upperBound > 1) {
+                    config.wb.Sheets[workSheet][theKey + upperBound] &&
+                        config.wb.Sheets[workSheet][theKey + upperBound]['v'] ?
+                        returnable.push(config.wb.Sheets[workSheet][theKey + upperBound]['v']) : returnable;
+                    upperBound--;
+                }
+            }
             return returnable.length ? returnable.reverse() : null;
         }
     },
@@ -217,6 +240,7 @@ var config = {
 
 $(document).ready(function() {
     config.init(['#draganddropitemsid']);
+	
     $('#draganddropitemsid').on('drop',
         function(e) {
             config.defPreventer(e);
@@ -225,99 +249,96 @@ $(document).ready(function() {
             config.eventManager.on('OA Name', config.getItemNamesByColumn);
             config.eventManager.on('Client Account', config.getItemNamesByColumn);
             config.eventManager.on('Campaign ID', config.getItemNamesByColumn);
-
+            config.eventManager.on('transport do', config.transport.transportHandler);
+            config.eventManager.on('populate config.Ids2Process', function(pairs) {
+                config['Ids2Process'] = [];
+                if (pairs && pairs.length) {
+                    pairs.forEach(function(pair) {
+                        var id = pair['id'];
+                        var writable = pair['writable'];
+                        config.EventsBus.eventBusPut(pair);
+                    });
+                }
+            });
             config.eventManager.on('onFileRead', function() {
                 if (config.sheetNames.length) {
                     config.sheetNames.forEach(function(sheet) {
                         // the file with the unique field Issue Id , that is missing in the one generated by CSV file from YT, should be the first to grad-and-drop
-						config[sheet] = config[sheet] ? config[sheet] : {};
-						if(!config[sheet]['Issue Id'] && config.rangeSeeker(sheet, 'Issue Id')){
-							config[sheet]['Issue Id'] = config.eventManager.trigger('Issue Id', [sheet, 'Issue Id']);
-						}
-						if(!config[sheet]['OA Name'] && config.rangeSeeker(sheet, 'OA Name')){
-							config[sheet]['OA Name'] = config.eventManager.trigger('OA Name', [sheet, 'OA Name']);
-						}
-						if(!config[sheet]['Client Account'] && config.rangeSeeker(sheet, 'Client Account')){
-							config[sheet]['Client Account'] = config.eventManager.trigger('Client Account', [sheet, 'Client Account']);
-						}
-						if(!config[sheet]['Campaign ID'] && config.rangeSeeker(sheet, 'Campaign ID')){
-							config[sheet]['Campaign ID'] = config.eventManager.trigger('Campaign ID', [sheet, 'Campaign ID']);
-						}
+                        config[sheet] = config[sheet] ? config[sheet] : {};
+                        if (!config[sheet]['Issue Id'] && config.rangeSeeker(sheet, 'Issue Id')) {
+                            config[sheet]['Issue Id'] = config.eventManager.trigger('Issue Id', [sheet, 'Issue Id']);
+                        }
+                        if (!config[sheet]['OA Name'] && config.rangeSeeker(sheet, 'OA Name')) {
+                            config[sheet]['OA Name'] = config.eventManager.trigger('OA Name', [sheet, 'OA Name']);
+                        }
+                        if (!config[sheet]['Client Account'] && config.rangeSeeker(sheet, 'Client Account')) {
+                            config[sheet]['Client Account'] = config.eventManager.trigger('Client Account', [sheet, 'Client Account']);
+                        }
+                        if (!config[sheet]['Campaign ID'] && config.rangeSeeker(sheet, 'Campaign ID')) {
+                            config[sheet]['Campaign ID'] = config.eventManager.trigger('Campaign ID', [sheet, 'Campaign ID']);
+                        }
                     });
-					config.eventManager.trigger('getItemNamesByColumn Done', []);
+                    config.eventManager.trigger('getItemNamesByColumn Done', []);
                 } else {
                     throw new UserException("The Excel File Seems To Have No Sheets!");
                 }
             });
-			config.eventManager.on('getItemNamesByColumn Done', function() {
-				if(config.sheetNames.every(function(sheet) {
-					return config[sheet]['OA Name'] && config[sheet]['OA Name'].length && 
-							config[sheet]['Client Account'] && config[sheet]['Client Account'].length
-				}) && config.sheetNames.some(function(sheet){
-					return config[sheet]['Campaign ID'] && config[sheet]['Campaign ID'].length
-				}) && 
-					config.sheetNames.some(function(sheet){
-						return config[sheet]['Issue Id'] && config[sheet]['Issue Id'].length
-				})) {
-					config.eventManager.trigger('Reading All Complete', []); 	
-				}
-			});
-        });
-    config.eventManager.on('Reading All Complete', function() {
-        console.log('Reading All Complete');
-        $('#draganddropitemsid').addClass('success');
-		var Ids1, ClientAcc1, OANames1, CampaignIDs, ClientAcc2, OANames2, Ids2Process = [];
-		for(var i = 0; i < config.sheetNames.length; i++) {
-			if(config[config.sheetNames[i]]) {
-				if(~Object.keys(config[config.sheetNames[i]]).indexOf('Issue Id')){
-					Ids1 = config[config.sheetNames[0]]['Issue Id'];
-						if(~Object.keys(config[config.sheetNames[i]]).indexOf('Client Account')) {
-							ClientAcc1 = config[config.sheetNames[i]]['Client Account'];
-						}
-						if(~Object.keys(config[config.sheetNames[i]]).indexOf('OA Name')) {
-							OANames1 = config[config.sheetNames[i]]['OA Name'];
-						}
-				} else {
-					if(~Object.keys(config[config.sheetNames[i]]).indexOf('Client Account')) {
-							ClientAcc2 = config[config.sheetNames[i]]['Client Account'];
-						}
-					if(~Object.keys(config[config.sheetNames[i]]).indexOf('OA Name')) {
-							OANames2 = config[config.sheetNames[i]]['OA Name'];
+            config.eventManager.on('getItemNamesByColumn Done', function() {
+					if (config.sheetNames.every(function(sheet) {
+							return config[sheet]['OA Name'] && config[sheet]['OA Name'].length &&
+								config[sheet]['Client Account'] && config[sheet]['Client Account'].length
+						}) && config.sheetNames.some(function(sheet) {
+							return config[sheet]['Campaign ID'] && config[sheet]['Campaign ID'].length
+						}) &&
+						config.sheetNames.some(function(sheet) {
+							return config[sheet]['Issue Id'] && config[sheet]['Issue Id'].length
+						})) {
+						config.eventManager.trigger('Reading All Complete', []);
 					}
-					CampaignIDs = config[config.sheetNames[i]]['Campaign ID'];
-				}
-			}
-		}
-		if(Ids1 && Ids1.length) {
-			for(var i = 0; i < Ids1.length; i++) {
-				if(~ClientAcc2.indexOf(ClientAcc1[i]) && ~OANames2.indexOf(OANames1[i])){
-					var pair = {};
-					pair['id'] = Ids1[i];
-					pair['writable'] = CampaignIDs[OANames2.indexOf(OANames1[i])];
-					Ids2Process.push(pair);
-				}
-			}
-		}
-		if(Ids2Process && Ids2Process.length){
-			config['Ids2Process'] = Ids2Process;
-		}
-		
-		config['Ids2Process'].forEach(function(pair) {
-			var id = pair['id'];
-			var writable = pair['writable'];
-			config.eventManager.on(id, [id, writable]);
-			config.eventManager.trigger('transport do', [id, writable]);
-		});
-		
-    }); // the end of 'Reading All Complete' line
-	config.eventManager.on('transport do', function(id, writable) {
-			if(id && writable) {
-				config.transport.getIssue(id).done(function(data){
-					console.log(data)
-				}).done(function() {
-					config.transport.execCommand(id, {'Campaign ID' : writable});
 				});
-			}
-		});
-		
+			}); // on drop ending line
+			config.eventManager.on('Reading All Complete', function() {
+					console.log('Reading All Complete');
+					$('#draganddropitemsid').addClass('success');
+					var Ids1, ClientAcc1, OANames1, CampaignIDs, ClientAcc2, OANames2, Ids2Process = [];
+					for (var i = 0; i < config.sheetNames.length; i++) {
+						if (config[config.sheetNames[i]]) {
+							if (~Object.keys(config[config.sheetNames[i]]).indexOf('Issue Id')) {
+								Ids1 = config[config.sheetNames[0]]['Issue Id'];
+								if (~Object.keys(config[config.sheetNames[i]]).indexOf('Client Account')) {
+									ClientAcc1 = config[config.sheetNames[i]]['Client Account'];
+								}
+								if (~Object.keys(config[config.sheetNames[i]]).indexOf('OA Name')) {
+									OANames1 = config[config.sheetNames[i]]['OA Name'];
+								}
+							} else {
+								if (~Object.keys(config[config.sheetNames[i]]).indexOf('Client Account')) {
+									ClientAcc2 = config[config.sheetNames[i]]['Client Account'];
+								}
+								if (~Object.keys(config[config.sheetNames[i]]).indexOf('OA Name')) {
+									OANames2 = config[config.sheetNames[i]]['OA Name'];
+								}
+								CampaignIDs = config[config.sheetNames[i]]['Campaign ID'];
+							}
+						}
+					}
+					if (Ids1 && Ids1.length) {
+						for (var i = 0; i < Ids1.length; i++) {
+							if (~ClientAcc2.indexOf(ClientAcc1[i]) && ~OANames2.indexOf(OANames1[i])) {
+								var pair = {};
+								pair['id'] = Ids1[i];
+								pair['writable'] = CampaignIDs[OANames2.indexOf(OANames1[i])];
+								Ids2Process.push(pair);
+							}
+						}
+					}
+					// firing the first ajax from the Ids2Process first pair
+					config.eventManager.trigger('transport do', [Ids2Process[0]['id'], Ids2Process[0]['writable']]);
+					// splicing the first ajax data from the array of pairs
+					Ids2Process.splice(0, 1);
+					// populating the EventsBus events pool with the array of pairs after the first ajax call
+					config.eventManager.trigger('populate config.Ids2Process', [Ids2Process]);
+					// unsubscribing from the EventsBus populating
+					config.eventManager.off('populate config.Ids2Process');
+    }); // the end of 'Reading All Complete' line
 });
