@@ -12,6 +12,7 @@ var config = {
             });
         };
         this.createIssue = function(data) {
+			console.log(data);
             return $.ajax({
                 url: host + '/issue',
                 data: data,
@@ -65,7 +66,7 @@ var config = {
                     console.log(data)
                 }).done(function() {
                     config.transport.execCommand(id, {
-                        'Campaign ID': writable
+                        'PA Campaign Task ID': writable
                     });
                 }).done(function() {
                     config.EventsBus.eventBusDo();
@@ -341,4 +342,16 @@ $(document).ready(function() {
 					// unsubscribing from the EventsBus populating
 					config.eventManager.off('populate config.Ids2Process');
     }); // the end of 'Reading All Complete' line
+	
+	// off all events: 
+	config.eventManager.off('Issue Id');
+    config.eventManager.off('OA Name');
+    config.eventManager.off('Client Account');
+    config.eventManager.off('Campaign ID');
+    config.eventManager.off('transport do');
+    config.eventManager.off('populate config.Ids2Process');
+	config.eventManager.off('onFileRead');
+	config.eventManager.off('getItemNamesByColumn Done');
+	config.eventManager.off('Reading All Complete');
+	
 });
