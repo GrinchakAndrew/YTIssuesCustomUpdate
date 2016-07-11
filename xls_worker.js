@@ -85,7 +85,9 @@ var config = {
             if (eventBus.length) {
                 config.transport.transportHandler.apply(this, [eventBus[0]['id'], eventBus[0]['writable']]);
                 eventBus.splice(0, 1);
-            }
+            } else {
+				config.eventManager.trigger('all events off');
+			}
         };
     })(),
     eventManager: new(function() {
@@ -293,12 +295,14 @@ $(document).ready(function() {
                         if (!config[sheet]['Client Account'] && config.rangeSeeker(sheet, 'Client Account')) {
                             config[sheet]['Client Account'] = config.eventManager.trigger('Client Account', [sheet, 'Client Account']);
                         }
-						//PA Campaign Task ID
+						
                         if (!config[sheet]['PA Campaign Task ID'] && config.rangeSeeker(sheet, 'PA Campaign Task ID')) {
                             config[sheet]['PA Campaign Task ID'] = config.eventManager.trigger('PA Campaign Task ID', [sheet, 'PA Campaign Task ID']);
                         }
                     });
-                    config.eventManager.trigger('getItemNamesByColumn Done', []);
+                    
+					config.eventManager.trigger('getItemNamesByColumn Done', []);
+					
                 } else {
                     throw new UserException("The Excel File Seems To Have No Sheets!");
                 }
@@ -369,15 +373,16 @@ $(document).ready(function() {
 					config.eventManager.off('populate config.Ids2Process');
     }); // the end of 'Reading All Complete' line
 	
-	// off all events: 
-	/* config.eventManager.off('Issue Id');
-    config.eventManager.off('OA Name');
-    config.eventManager.off('Client Account');
-    config.eventManager.off('PA Campaign Task ID');
-    config.eventManager.off('transport do');
-    config.eventManager.off('populate config.Ids2Process');
-	config.eventManager.off('onFileRead');
-	config.eventManager.off('getItemNamesByColumn Done');
-	config.eventManager.off('Reading All Complete'); */
+			config.eventManager.on('all events off', function() {
+					config.eventManager.off('Issue Id');
+					config.eventManager.off('OA Name');
+					config.eventManager.off('Client Account');
+					config.eventManager.off('PA Campaign Task ID');
+					config.eventManager.off('transport do');
+					config.eventManager.off('populate config.Ids2Process');
+					config.eventManager.off('onFileRead');
+					config.eventManager.off('getItemNamesByColumn Done');
+					config.eventManager.off('Reading All Complete');
+			});
 	
 });
